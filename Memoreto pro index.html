@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>memoreto</title>
+<style>
+body{margin:0;font-family:system-ui;background:#FAFAF9;color:#111;transition:.5s}
+body.dark{background:#0A0A0A;color:#fafafa}
+.wrap{max-width:680px;margin:auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.logo{font-size:30px;font-weight:900}
+.toggle{width:62px;height:34px;background:#fff;border:2px solid #ddd;border-radius:50px;position:relative;cursor:pointer;transition:.5s}
+body.dark .toggle{background:#222;border-color:#444}
+.knob{width:28px;height:28px;background:#111;border-radius:50%;position:absolute;top:1px;left:1px;transition:transform .5s cubic-bezier(.68,-0.55,.27,1.55);display:grid;place-items:center;color:#fff;font-size:14px;font-weight:700}
+body.dark .knob{transform:translateX(26px);background:#fff;color:#111}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+body.dark .card{background:#171717;border-color:#27272a}
+textarea{width:100%;min-height:100px;border:0;outline:none;font-size:16px;background:transparent;color:inherit;resize:none}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #eee}
+body.dark .row{border-color:#27272a}
+.btn{background:#2563EB;color:#fff;border:0;padding:9px 18px;border-radius:10px;font-weight:700;cursor:pointer}
+.search{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-bottom:14px;outline:none}
+body.dark .search{background:#171717;border-color:#333;color:#fff}
+.clip-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.mini{padding:7px 12px;border-radius:8px;border:1px solid #ddd;background:#f5f5f5;cursor:pointer;font-size:12px;font-weight:600}
+body.dark .mini{background:#222;border-color:#333;color:#fff}
+.mini.copy{background:#111;color:#fff}
+body.dark .mini.copy{background:#fff;color:#000}
+.mini.del{color:red}
+.toast{position:fixed;top:16px;right:16px;background:#111;color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.3s}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+<div class="header">
+<div class="logo">memoreto</div>
+<div class="toggle" id="toggle"><div class="knob" id="knob">D</div></div>
+</div>
+<input class="search" id="search" placeholder="Search...">
+<div class="card">
+<textarea id="inp" placeholder="Paste anything here..."></textarea>
+<div class="row"><span id="cnt" style="font-size:12px;color:#888">0 chars</span><button class="btn" id="saveBtn">Save</button></div>
+</div>
+<div id="clips" style="margin-top:14px"></div>
+</div>
+<script>
+var data=JSON.parse(localStorage.getItem('mem_v9')||'[]');
+var theme=localStorage.getItem('theme_v9')||'light';
+function applyTheme(){
+ document.body.className=theme==='dark'?'dark':'';
+ document.getElementById('knob').textContent=theme==='dark'?'L':'D';
+}
+applyTheme();
+document.getElementById('toggle').onclick=function(){
+ theme=theme==='dark'?'light':'dark';
+ localStorage.setItem('theme_v9',theme);
+ applyTheme();
+ showToast(theme==='dark'?'Dark':'Light');
+};
+var inp=document.getElementById('inp');
+inp.addEventListener('input',function(){
+ document.getElementById('cnt').textContent=this.value.length+' chars';
+});
+function showToast(t){
+ var e=document.getElementById('toast');
+ e.textContent=t;e.classList.add('show');
+ setTimeout(function(){e.classList.remove('show')},2000);
+}
+function saveData(){localStorage.setItem('mem_v9',JSON.stringify(data))}
+document.getElementById('saveBtn').onclick=function(){
+ var v=inp.value.trim();if(!v)return;
+ data.unshift({id:Date.now(),text:v});
+ saveData();inp.value='';document.getElementById('cnt').textContent='0 chars';
+ render();showToast('Saved');
+};
+document.getElementById('search').oninput=render;
+function render(){
+ var q=document.getElementById('search').value.toLowerCase();
+ var list=data.filter(function(x){return !q||x.text.toLowerCase().indexOf(q)>-1});
+ var c=document.getElementById('clips');c.innerHTML='';
+ if(!list.length){c.innerHTML='<div style="text-align:center;padding:30px;color:#888">Nothing yet</div>';return}
+ list.forEach(function(it){
+  var div=document.createElement('div');div.className='card';
+  var txt=document.createElement('div');txt.style.whiteSpace='pre-wrap';txt.style.wordBreak='break-word';txt.textContent=it.text;
+  var foot=document.createElement('div');foot.className='clip-foot';
+  var b1=document.createElement('button');b1.className='mini copy';b1.textContent='Copy';
+  b1.onclick=function(){navigator.clipboard.writeText(it.text);var old=this.textContent;this.textContent='Copied';var self=this;setTimeout(function(){self.textContent=old},1200);showToast('Copied')};
+  var b2=document.createElement('button');b2.className='mini del';b2.textContent='Delete';
+  b2.onclick=function(){data=data.filter(function(x){return x.id!==it.id});saveData();render();showToast('Deleted')};
+  foot.appendChild(b1);foot.appendChild(b2);
+  div.appendChild(txt);div.appendChild(foot);
+  c.appendChild(div);
+ });
+}
+render();
+</script>
+</body>
+</html>
